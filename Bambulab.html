@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bambu Lab Print Cost Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%); }
+        .card-glass { background: rgba(255,255,255,0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.08); }
+        .input-dark { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; }
+        .input-dark:focus { border-color: #22d3ee; box-shadow: 0 0 0 3px rgba(34,211,238,0.1); outline: none; }
+        .btn-primary { background: linear-gradient(135deg, #06b6d4, #0891b2); }
+        .btn-primary:hover { background: linear-gradient(135deg, #22d3ee, #06b6d4); }
+        .btn-danger { background: linear-gradient(135deg, #ef4444, #dc2626); }
+        .btn-success { background: linear-gradient(135deg, #10b981, #059669); }
+        .glow { box-shadow: 0 0 30px rgba(6,182,212,0.15); }
+        .tab-active { border-bottom: 2px solid #22d3ee; color: #22d3ee; }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .stat-card { background: linear-gradient(135deg, rgba(6,182,212,0.1), rgba(6,182,212,0.02)); border: 1px solid rgba(6,182,212,0.2); }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+        ::-webkit-scrollbar-thumb { background: rgba(34,211,238,0.3); border-radius: 3px; }
+        .modal-overlay { background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen text-white">
+
+    <!-- Header -->
+    <header class="border-b border-white/10 px-6 py-4">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg btn-primary flex items-center justify-center">
+                    <i class="fas fa-cube text-white text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold">Bambu Lab Cost Calculator</h1>
+                    <p class="text-xs text-gray-400">Calculate & Track Your 3D Print Costs</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 text-sm text-gray-400">
+                <i class="fas fa-calendar"></i>
+                <span id="currentDate"></span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 py-8">
+
+        <!-- Tabs -->
+        <div class="flex gap-6 mb-8 border-b border-white/10">
+            <button onclick="switchTab('calculator')" id="tab-calculator" class="pb-3 px-1 text-sm font-medium tab-active transition-all">
+                <i class="fas fa-calculator mr-2"></i>Calculator
+            </button>
+            <button onclick="switchTab('history')" id="tab-history" class="pb-3 px-1 text-sm font-medium text-gray-400 hover:text-white transition-all">
+                <i class="fas fa-history mr-2"></i>Print History
+            </button>
+            <button onclick="switchTab('settings')" id="tab-settings" class="pb-3 px-1 text-sm font-medium text-gray-400 hover:text-white transition-all">
+                <i class="fas fa-cog mr-2"></i>Settings
+            </button>
+        </div>
+
+        <!-- Calculator Tab -->
+        <div id="panel-calculator" class="fade-in">
+            <div class="grid lg:grid-cols-3 gap-6">
+
+                <!-- Left: Input Form -->
+                <div class="lg:col-span-2 space-y-6">
+
+                    <!-- Print Info -->
+                    <div class="card-glass rounded-xl p-6 glow">
+                        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                            <i class="fas fa-info-circle text-cyan-400"></i> Print Information
+                        </h2>
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Print Name</label>
+                                <input type="text" id="printName" class="input-dark w-full rounded-lg px-4 py-2.5 text-sm" placeholder="e.g. Phone Stand v2">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Date</label>
+                                <input type="date" id="printDate" class="input-dark w-full rounded-lg px-4 py-2.5 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Printer Model</label>
+                                <select id="printerModel" class="input-dark w-full rounded-lg px-4 py-2.5 text-sm" onchange="updatePrinterSpecs()">
+                                    <option value="X1C">Bambu Lab X1 Carbon</option>
+                                    <option value="X1E">Bambu Lab X1E</option>
+                                    <option value="P1S" selected>Bambu Lab P1S</option>
+                                    <option value="P1P">Bambu Lab P1P</option>
+                                    <option value="A1">Bambu Lab A1</option>
+                                    <option value="A1Mini">Bambu Lab A1 Mini</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Status</label>
+                                <select id="printStatus" class="input-dark w-full rounded-lg px-4 py-2.5 text-sm">
+                                    <option value="success">✅ Success</option>
+                                    <option value="failed">❌ Failed</option>
+                                    <option value="in-progress">🔄 In Progress</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Filament -->
+                    <div class="card-glass rounded-xl p-6">
+                        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                            <i class="fas fa-scroll text-cyan-400"></i> Filament
+                        </h2>
+                        <div class="grid md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Filament Type</label>
+                                <select id="filamentType" class="input-dark w-full rounded-lg px-4 py-2.5 text-sm">
+                                    <option value="PLA">PLA</option>
+                                    <option value="PETG">PETG</option>
+                                    <option value="ABS">ABS</option>
+                                    <option value="ASA">ASA</option>
+                                    <option value="TPU">TPU</option>
+                                    <option value="PC">PC</option>
+                                    <option value="PA">PA (Nylon)</option>
+                                    <option value="PLA-CF">PLA-CF</option>
+                                    <option value="PETG-CF">PETG-CF</option>
+                                    <option value="PA-CF">PA-CF</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Weight Used (gram)</label>
+                                <input type="number" id="filamentWeight" class="input-dark w-full rounded-lg px-4 py-2.5 text-sm" placeholder="e.g. 45" step="0.1" min="0" oninput="calculateCost()">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Price per Kg (Rp)</label>
+                                <input type="number" id="filamentPrice" class="input-dark w-full rounded-lg px-4 py-2.5 text-sm" placeholder="e.g. 250000" step="1000" min="0" oninput="calculateCost()">
+                            </div>
+                        </div>
+                        <div class="grid md:grid-cols-2 gap-4 mt-4">
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Color</label>
+                                <input type="text" id="filamentColor" class="input-dark w-full rounded-lg px-4 py-2.5 text-sm" placeholder="e.g. Matte Black">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Brand</label>
+                                <input type="text" id="filamentBrand" class="input-dark w-full rounded-lg px-4 py-2.5 text-sm" placeholder="e.g. Bambu Lab / eSUN">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Print Time & Electricity -->
+                    <div class="card-glass rounded-xl p-6">
+                        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                            <i class="fas fa-clock text-cyan-400"></i> Print Time & Electricity
+                        </h2>
+                        <div class="grid md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Print Duration (hours)</label>
+                                <input type="number" id="printHours" class="input-dark w-full rounded-lg px-4 py-2.5 text-sm" placeholder="e.g. 3.5" step="0.1" min="0" oninput="calculateCost()">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Power Consumption (Watt)</label>
+                                <input type="number" id="powerWatt" class="input-dark w-full rounded-lg px-4 py-2.5 text-sm" value="220" step="10" min="0" oninput="calculateCost()">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Electricity Rate (Rp/kWh)</label>
+                                <input type="number" id="electricityRate" class="input-dark w-full rounded-lg px-4 py-2.5 text-sm" value="1445" step="1" min="0" oninput="calculateCost()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Additional Costs -->
+                    <div class="card-glass rounded-xl p-6">
+                        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                            <i class="fas fa-plus-circle text-cyan-400"></i> Additional Costs
+                        </h2>
+                        <div class="grid md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Printer Price (Rp)</label>
+                                <input type="number" id="printerPrice" class="input-dark w-full rounded-lg px-4 py-2.5 text-sm" value="8500000" step="100000" min="0" oninput="calculateCost()">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Expected Lifetime (prints)</label>
+                                <input type="number" id="printerLifetime" class="input-dark w-full rounded-lg px-4 py-2.5 text-sm" value="2000" step="100" min="1" oninput="calculateCost()">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Nozzle/Plate Cost (Rp)</label>
+                                <input type="number" id="wearCost" class="input-dark w-full rounded-lg px-4 py-2.5 text-sm" value="0" step="1000" min="0" oninput="calculateCost()">
+                            </div>
+                        </div>
+                        <div class="grid md:grid-cols-2 gap-4 mt-4">
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Profit Margin (%)</label>
+                                <input type="number" id="profitMargin" class="input-dark w-full rounded-lg px-4 py-2.5 text-sm" value="50" step="5" min="0" oninput="calculateCost()">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Notes</label>
+                                <input type="text" id="printNotes" class="input-dark w-full rounded-lg px-4 py-2.5 text-sm" placeholder="Optional notes...">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex gap-3">
+                        <button onclick="savePrint()" class="btn-primary px-6 py-3 rounded-lg font-medium text-sm flex items-center gap-2 transition-all hover:scale-105">
+                            <i class="fas fa-save"></i> Save Print
+                        </button>
+                        <button onclick="resetForm()" class="px-6 py-3 rounded-lg font-medium text-sm border border-white/20 hover:bg-white/5 transition-all">
+                            <i class="fas fa-redo mr-2"></i> Reset
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right: Cost Summary -->
+                <div class="space-y-6">
+                    <div class="card-glass rounded-xl p-6 glow sticky top-8">
+                        <h2 class="text-lg font-semibold mb-5 flex items-center gap-2">
+                            <i class="fas fa-chart-pie text-cyan-400"></i> Cost Breakdown
+                        </h2>
+
+                        <div class="space-y-4">
+                            <div class="stat-card rounded-lg p-4">
+                                <div class="text-xs text-gray-400 mb-1">Filament Cost</div>
+                                <div class="text-xl font-bold text-cyan-300" id="costFilament">Rp 0</div>
+                            </div>
+                            <div class="stat-card rounded-lg p-4">
+                                <div class="text-xs text-gray-400 mb-1">Electricity Cost</div>
+                                <div class="text-xl font-bold text-cyan-300" id="costElectricity">Rp 0</div>
+                            </div>
+                            <div class="stat-card rounded-lg p-4">
+                                <div class="text-xs text-gray-400 mb-1">Depreciation Cost</div>
+                                <div class="text-xl font-bold text-cyan-300" id="costDepreciation">Rp 0</div>
+                            </div>
+                            <div class="stat-card rounded-lg p-4">
+                                <div class="text-xs text-gray-400 mb-1">Wear & Tear</div>
+                                <div class="text-xl font-bold text-cyan-300" id="costWear">Rp 0</div>
+                            </div>
+
+                            <div class="border-t border-white/10 pt-4">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-sm text-gray-400">Total Cost</span>
+                                    <span class="text-2xl font-bold text-white" id="costTotal">Rp 0</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-400">Selling Price (<span id="marginDisplay">50</span>%)</span>
+                                    <span class="text-2xl font-bold text-emerald-400" id="costSelling">Rp 0</span>
+                                </div>
+                            </div>
+
+                            <div class="border-t border-white/10 pt-4">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-400">Profit</span>
+                                    <span class="text-lg font-bold text-emerald-300" id="costProfit">Rp 0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Tab -->
+        <div id="panel-history" class="hidden fade-in">
+            <!-- Stats Overview -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div class="card-glass rounded-xl p-4 text-center">
+                    <div class="text-2xl font-bold text-cyan-300" id="statTotalPrints">0</div>
+                    <div class="text-xs text-gray-400 mt-1">Total Prints</div>
+                </div>
+                <div class="card-glass rounded-xl p-4 text-center">
+                    <div class="text-2xl font-bold text-emerald-300" id="statTotalCost">Rp 0</div>
+                    <div class="text-xs text-gray-400 mt-1">Total Cost</div>
+                </div>
+                <div class="card-glass rounded-xl p-4 text-center">
+                    <div class="text-2xl font-bold text-amber-300" id="statTotalFilament">0 g</div>
+                    <div class="text-xs text-gray-400 mt-1">Filament Used</div>
+                </div>
+                <div class="card-glass rounded-xl p-4 text-center">
+                    <div class="text-2xl font-bold text-purple-300" id="statTotalHours">0 h</div>
+                    <div class="text-xs text-gray-400 mt-1">Total Hours</div>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="card-glass rounded-xl p-4 mb-6 flex flex-wrap gap-3 items-center">
+                <input type="text" id="searchHistory" class="input-dark rounded-lg px-4 py-2 text-sm flex-1 min-w-[200px]" placeholder="🔍 Search prints..." oninput="renderHistory()">
+                <select id="filterStatus" class="input-dark rounded-lg px-4 py-2 text-sm" onchange="renderHistory()">
+                    <option value="all">All Status</option>
+                    <option value="success">Success</option>
+                    <option value="failed">Failed</option>
+                    <option value="in-progress">In Progress</option>
+                </select>
+                <select id="filterPrinter" class="input-dark rounded-lg px-4 py-2 text-sm" onchange="renderHistory()">
+                    <option value="all">All Printers</option>
+                    <option value="X1C">X1 Carbon</option>
+                    <option value="X1E">X1E</option>
+                    <option value="P1S">P1S</option>
+                    <option value="P1P">P1P</option>
+                    <option value="A1">A1</option>
+                    <option value="A1Mini">A1 Mini</option>
+                </select>
+                <button onclick="exportData()" class="btn-success px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+                    <i class="fas fa-download"></i> Export CSV
+                </button>
+                <button onclick="confirmDeleteAll()" class="btn-danger px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+                    <i class="fas fa-trash"></i> Clear All
+                </button>
+            </div>
+
+            <!-- History Table -->
+            <div class="card-glass rounded-xl overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-white/5">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Date</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Name</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Printer</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Filament</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Weight</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Time</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Cost</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Status</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTable" class="divide-y divide-white/5">
+                        </tbody>
+                    </table>
+                </div>
+                <div id="emptyHistory" class="hidden p-12 text-center text-gray-500">
+                    <i class="fas fa-inbox text-4xl mb-3"></i>
+                    <p>No print history yet. Start calculating and save your first print!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div id="panel-settings" class="hidden fade-in">
+            <div class="max-w-2xl space-y-6">
+                <div class="card-glass rounded-xl p-6">
+                    <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <i class="fas fa-bolt text-cyan-400"></i> Default Settings
+                    </h2>
+                    <p class="text-sm text-gray-400 mb-4">These values will auto-fill in the calculator.</p>
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-1">Default Electricity Rate (Rp/kWh)</label>
+                            <input type="number" id="setDefaultElec" class="input-dark w-full rounded-lg px-4 py-2.5 text-sm" value="1445">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-1">Default Profit Margin (%)</label>
+                            <input type="number" id="setDefaultMargin" class="input-dark w-full rounded-lg px-4 py-2.5 text-sm" value="50">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-1">Default Printer</label>
+                            <select id="setDefaultPrinter" class="input-dark w-full rounded-lg px-4 py-2.5 text-sm">
+                                <option value="X1C">Bambu Lab X1 Carbon</option>
+                                <option value="X1E">Bambu Lab X1E</option>
+                                <option value="P1S" selected>Bambu Lab P1S</option>
+                                <option value="P1P">Bambu Lab P1P</option>
+                                <option value="A1">Bambu Lab A1</option>
+                                <option value="A1Mini">Bambu Lab A1 Mini</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-1">Currency</label>
+                            <select id="setDefaultCurrency" class="input-dark w-full rounded-lg px-4 py-2.5 text-sm">
+                                <option value="Rp">IDR (Rp)</option>
+                                <option value="$">USD ($)</option>
+                                <option value="€">EUR (€)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button onclick="saveSettings()" class="btn-primary px-6 py-2.5 rounded-lg font-medium text-sm mt-4 flex items-center gap-2">
+                        <i class="fas fa-save"></i> Save Settings
+                    </button>
+                </div>
+
+                <div class="card-glass rounded-xl p-6">
+                    <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <i class="fas fa-database text-cyan-400"></i> Data Management
+                    </h2>
+                    <div class="flex flex-wrap gap-3">
+                        <button onclick="exportJSON()" class="px-4 py-2.5 rounded-lg text-sm font-medium border border-white/20 hover:bg-white/5 flex items-center gap-2">
+                            <i class="fas fa-file-export"></i> Export JSON Backup
+                        </button>
+                        <label class="px-4 py-2.5 rounded-lg text-sm font-medium border border-white/20 hover:bg-white/5 flex items-center gap-2 cursor-pointer">
+                            <i class="fas fa-file-import"></i> Import JSON Backup
+                            <input type="file" accept=".json" class="hidden" onchange="importJSON(event)">
+                        </label>
+                    </div>
+                </div>
+
+                <div class="card-glass rounded-xl p-6">
+                    <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <i class="fas fa-print text-cyan-400"></i> Printer Specs Reference
+                    </h2>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-white/5">
+                                <tr>
+                                    <th class="px-3 py-2 text-left text-xs text-gray-400">Printer</th>
+                                    <th class="px-3 py-2 text-left text-xs text-gray-400">Max Power</th>
+                                    <th class="px-3 py-2 text-left text-xs text-gray-400">Avg Power</th>
+                                    <th class="px-3 py-2 text-left text-xs text-gray-400">Price (est.)</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-white/5">
+                                <tr><td class="px-3 py-2">X1 Carbon</td><td class="px-3 py-2">350W</td><td class="px-3 py-2">~150W</td><td class="px-3 py-2">Rp 22.000.000</td></tr>
+                                <tr><td class="px-3 py-2">X1E</td><td class="px-3 py-2">350W</td><td class="px-3 py-2">~150W</td><td class="px-3 py-2">Rp 35.000.000</td></tr>
+                                <tr><td class="px-3 py-2">P1S</td><td class="px-3 py-2">220W</td><td class="px-3 py-2">~120W</td><td class="px-3 py-2">Rp 8.500.000</td></tr>
+                                <tr><td class="px-3 py-2">P1P</td><td class="px-3 py-2">220W</td><td class="px-3 py-2">~120W</td><td class="px-3 py-2">Rp 6.500.000</td></tr>
+                                <tr><td class="px-3 py-2">A1</td><td class="px-3 py-2">150W</td><td class="px-3 py-2">~80W</td><td class="px-3 py-2">Rp 5.500.000</td></tr>
+                                <tr><td class="px-3 py-2">A1 Mini</td><td class="px-3 py-2">120W</td><td class="px-3 py-2">~60W</td><td class="px-3 py-2">Rp 3.500.000</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-6 right-6 transform translate-y-20 opacity-0 transition-all duration-300 z-50">
+        <div class="bg-emerald-600 text-white px-5 py-3 rounded-lg shadow-lg flex items-center gap-2 text-sm">
+            <i class="fas fa-check-circle"></i>
+            <span id="toastMsg">Saved!</span>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="fixed inset-0 modal-overlay z-50 hidden flex items-center justify-center p-4">
+        <div class="card-glass rounded-xl p-6 max-w-sm w-full">
+            <h3 class="text-lg font-semibold mb-2">Confirm Delete</h3>
+            <p class="text-sm text-gray-400 mb-5" id="deleteModalMsg">Are you sure you want to delete this?</p>
+            <div class="flex gap-3 justify-end">
+                <button onclick="closeDeleteModal()" class="px-4 py-2 rounded-lg text-sm border border-white/20 hover:bg-white/5">Cancel</button>
+                <button id="deleteConfirmBtn" class="btn-danger px-4 py-2 rounded-lg text-sm font-medium">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== DATA & STATE ====================
+        const PRINTER_SPECS = {
+            X1C: { power: 150, price: 22000000, name: 'X1 Carbon' },
+            X1E: { power: 150, price: 35000000, name: 'X1E' },
+            P1S: { power: 120, price: 8500000, name: 'P1S' },
+            P1P: { power: 120, price: 6500000, name: 'P1P' },
+            A1: { power: 80, price: 5500000, name: 'A1' },
+            A1Mini: { power: 60, price: 3500000, name: 'A1 Mini' }
+        };
+
+        let prints = JSON.parse(localStorage.getItem('bambuPrints') || '[]');
+        let settings = JSON.parse(localStorage.getItem('bambuSettings') || '{}');
+        let editingId = null;
+
+        // ==================== INIT ====================
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('currentDate').textContent = new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            document.getElementById('printDate').value = new Date().toISOString().split('T')[0];
+            loadSettings();
+            calculateCost();
+            renderHistory();
+        });
+
+        // ==================== TABS ====================
+        function switchTab(tab) {
+            ['calculator', 'history', 'settings'].forEach(t => {
+                document.getElementById(`panel-${t}`).classList.toggle('hidden', t !== tab);
+                const tabBtn = document.getElementById(`tab-${t}`);
+                if (t === tab) {
+                    tabBtn.classList.add('tab-active');
+                    tabBtn.classList.remove('text-gray-400');
+                } else {
+                    tabBtn.classList.remove('tab-active');
+                    tabBtn.classList.add('text-gray-400');
+                }
+            });
+            if (tab === 'history') renderHistory();
+        }
+
+        // ==================== PRINTER SPECS ====================
+        function updatePrinterSpecs() {
+            const model = document.getElementById('printerModel').value;
+            const spec = PRINTER_SPECS[model];
+            document.getElementById('powerWatt').value = spec.power;
+            document.getElementById('printerPrice').value = spec.price;
+            calculateCost();
+        }
+
+        // ==================== CALCULATOR ====================
+        function calculateCost() {
+            const weight = parseFloat(document.getElementById('filamentWeight').value) || 0;
+            const pricePerKg = parseFloat(document.getElementById('filamentPrice').value) || 0;
+            const hours = parseFloat(document.getElementById('printHours').value) || 0;
+            const watt = parseFloat(document.getElementById('powerWatt').value) || 0;
+            const elecRate = parseFloat(document.getElementById('electricityRate').value) || 0;
+            const printerCost = parseFloat(document.getElementById('printerPrice').value) || 0;
+            const lifetime = parseFloat(document.getElementById('printerLifetime').value) || 1;
+            const wear = parseFloat(document.getElementById('wearCost').value) || 0;
+            const margin = parseFloat(document.getElementById('profitMargin').value) || 0;
+
+            const filamentCost = (weight / 1000) * pricePerKg;
+            const electricityCost = (watt / 1000) * hours * elecRate;
+            const depreciationCost = printerCost / lifetime;
+            const totalCost = filamentCost + electricityCost + depreciationCost + wear;
+            const sellingPrice = totalCost * (1 + margin / 100);
+            const profit = sellingPrice - totalCost;
+
+            document.getElementById('costFilament').textContent = formatCurrency(filamentCost);
+            document.getElementById('costElectricity').textContent = formatCurrency(electricityCost);
+            document.getElementById('costDepreciation').textContent = formatCurrency(depreciationCost);
+            document.getElementById('costWear').textContent = formatCurrency(wear);
+            document.getElementById('costTotal').textContent = formatCurrency(totalCost);
+            document.getElementById('costSelling').textContent = formatCurrency(sellingPrice);
+            document.getElementById('costProfit').textContent = formatCurrency(profit);
+            document.getElementById('marginDisplay').textContent = margin;
+
+            return { filamentCost, electricityCost, depreciationCost, wear, totalCost, sellingPrice, profit };
+        }
+
+        function formatCurrency(amount) {
+            const currency = settings.currency || 'Rp';
+            if (currency === 'Rp') {
+                return 'Rp ' + Math.round(amount).toLocaleString('id-ID');
+            }
+            return currency + ' ' + amount.toFixed(2);
+        }
+
+        // ==================== SAVE / LOAD ====================
+        function savePrint() {
+            const costs = calculateCost();
+            const printData = {
+                id: editingId || Date.now().toString(36) + Math.random().toString(36).substr(2),
+                name: document.getElementById('printName').value || 'Untitled Print',
+                date: document.getElementById('printDate').value,
+                printer: document.getElementById('printerModel').value,
+                status: document.getElementById('printStatus').value,
+                filamentType: document.getElementById('filamentType').value,
+                filamentWeight: parseFloat(document.getElementById('filamentWeight').value) || 0,
+                filamentPrice: parseFloat(document.getElementById('filamentPrice').value) || 0,
+                filamentColor: document.getElementById('filamentColor').value,
+                filamentBrand: document.getElementById('filamentBrand').value,
+                printHours: parseFloat(document.getElementById('printHours').value) || 0,
+                powerWatt: parseFloat(document.getElementById('powerWatt').value) || 0,
+                electricityRate: parseFloat(document.getElementById('electricityRate').value) || 0,
+                printerPrice: parseFloat(document.getElementById('printerPrice').value) || 0,
+                printerLifetime: parseFloat(document.getElementById('printerLifetime').value) || 2000,
+                wearCost: parseFloat(document.getElementById('wearCost').value) || 0,
+                profitMargin: parseFloat(document.getElementById('profitMargin').value) || 0,
+                notes: document.getElementById('printNotes').value,
+                costs: costs,
+                createdAt: editingId ? (prints.find(p => p.id === editingId)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+
+            if (editingId) {
+                const idx = prints.findIndex(p => p.id === editingId);
+                if (idx !== -1) prints[idx] = printData;
+                editingId = null;
+            } else {
+                prints.unshift(printData);
+            }
+
+            localStorage.setItem('bambuPrints', JSON.stringify(prints));
+            showToast(editingId ? 'Print updated!' : 'Print saved successfully!');
+            resetForm();
+            renderHistory();
+        }
+
+        function editPrint(id) {
+            const p = prints.find(pr => pr.id === id);
+            if (!p) return;
+            editingId = id;
+            switchTab('calculator');
+
+            document.getElementById('printName').value = p.name;
+            document.getElementById('printDate').value = p.date;
+            document.getElementById('printerModel').value = p.printer;
+            document.getElementById('printStatus').value = p.status;
+            document.getElementById('filamentType').value = p.filamentType;
+            document.getElementById('filamentWeight').value = p.filamentWeight;
+            document.getElementById('filamentPrice').value = p.filamentPrice;
+            document.getElementById('filamentColor').value = p.filamentColor || '';
+            document.getElementById('filamentBrand').value = p.filamentBrand || '';
+            document.getElementById('printHours').value = p.printHours;
+            document.getElementById('powerWatt').value = p.powerWatt;
+            document.getElementById('electricityRate').value = p.electricityRate;
+            document.getElementById('printerPrice').value = p.printerPrice;
+            document.getElementById('printerLifetime').value = p.printerLifetime;
+            document.getElementById('wearCost').value = p.wearCost;
+            document.getElementById('profitMargin').value = p.profitMargin;
+            document.getElementById('printNotes').value = p.notes || '';
+            calculateCost();
+            showToast('Editing: ' + p.name);
+        }
+
+        function deletePrint(id) {
+            document.getElementById('deleteModalMsg').textContent = 'Are you sure you want to delete this print record?';
+            document.getElementById('deleteModal').classList.remove('hidden');
+            document.getElementById('deleteConfirmBtn').onclick = () => {
+                prints = prints.filter(p => p.id !== id);
+                localStorage.setItem('bambuPrints', JSON.stringify(prints));
+                renderHistory();
+                closeDeleteModal();
+                showToast('Print deleted');
+            };
+        }
+
+        function confirmDeleteAll() {
+            document.getElementById('deleteModalMsg').textContent = 'This will permanently delete ALL print history. Are you sure?';
+            document.getElementById('deleteModal').classList.remove('hidden');
+            document.getElementById('deleteConfirmBtn').onclick = () => {
+                prints = [];
+                localStorage.setItem('bambuPrints', JSON.stringify(prints));
+                renderHistory();
+                closeDeleteModal();
+                showToast('All data cleared');
+            };
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').classList.add('hidden');
+        }
+
+        function resetForm() {
+            editingId = null;
+            document.getElementById('printName').value = '';
+            document.getElementById('printDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('printStatus').value = 'success';
+            document.getElementById('filamentWeight').value = '';
+            document.getElementById('filamentPrice').value = '';
+            document.getElementById('filamentColor').value = '';
+            document.getElementById('filamentBrand').value = '';
+            document.getElementById('printHours').value = '';
+            document.getElementById('wearCost').value = '0';
+            document.getElementById('printNotes').value = '';
+            updatePrinterSpecs();
+        }
+
+        // ==================== HISTORY RENDER ====================
+        function renderHistory() {
+            const search = (document.getElementById('searchHistory')?.value || '').toLowerCase();
+            const statusFilter = document.getElementById('filterStatus')?.value || 'all';
+            const printerFilter = document.getElementById('filterPrinter')?.value || 'all';
+
+            let filtered = prints.filter(p => {
+                const matchSearch = p.name.toLowerCase().includes(search) || p.filamentType.toLowerCase().includes(search);
+                const matchStatus = statusFilter === 'all' || p.status === statusFilter;
+                const matchPrinter = printerFilter === 'all' || p.printer === printerFilter;
+                return matchSearch && matchStatus && matchPrinter;
+            });
+
+            const tbody = document.getElementById('historyTable');
+            const empty = document.getElementById('emptyHistory');
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '';
+                empty.classList.remove('hidden');
+            } else {
+                empty.classList.add('hidden');
+                tbody.innerHTML = filtered.map(p => `
+                    <tr class="hover:bg-white/5 transition-colors">
+                        <td class="px-4 py-3 text-gray-300">${formatDate(p.date)}</td>
+                        <td class="px-4 py-3 font-medium">${escapeHtml(p.name)}</td>
+                        <td class="px-4 py-3"><span class="text-xs bg-cyan-900/30 text-cyan-300 px-2 py-0.5 rounded">${p.printer}</span></td>
+                        <td class="px-4 py-3">${p.filamentType}${p.filamentColor ? ' <span class="text-gray-500">(' + escapeHtml(p.filamentColor) + ')</span>' : ''}</td>
+                        <td class="px-4 py-3">${p.filamentWeight}g</td>
+                        <td class="px-4 py-3">${p.printHours}h</td>
+                        <td class="px-4 py-3 font-medium text-cyan-300">${formatCurrency(p.costs.totalCost)}</td>
+                        <td class="px-4 py-3">${statusBadge(p.status)}</td>
+                        <td class="px-4 py-3">
+                            <div class="flex gap-2">
+                                <button onclick="editPrint('${p.id}')" class="text-gray-400 hover:text-cyan-400 transition-colors" title="Edit"><i class="fas fa-pen text-xs"></i></button>
+                                <button onclick="deletePrint('${p.id}')" class="text-gray-400 hover:text-red-400 transition-colors" title="Delete"><i class="fas fa-trash text-xs"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            // Update stats
+            const totalCost = prints.reduce((s, p) => s + (p.costs?.totalCost || 0), 0);
+            const totalWeight = prints.reduce((s, p) => s + (p.filamentWeight || 0), 0);
+            const totalHours = prints.reduce((s, p) => s + (p.printHours || 0), 0);
+            document.getElementById('statTotalPrints').textContent = prints.length;
+            document.getElementById('statTotalCost').textContent = formatCurrency(totalCost);
+            document.getElementById('statTotalFilament').textContent = totalWeight >= 1000 ? (totalWeight / 1000).toFixed(2) + ' kg' : totalWeight.toFixed(0) + ' g';
+            document.getElementById('statTotalHours').textContent = totalHours.toFixed(1) + ' h';
+        }
+
+        function statusBadge(status) {
+            const map = {
+                'success': '<span class="text-xs bg-emerald-900/30 text-emerald-300 px-2 py-0.5 rounded">✅ Success</span>',
+                'failed': '<span class="text-xs bg-red-900/30 text-red-300 px-2 py-0.5 rounded">❌ Failed</span>',
+                'in-progress': '<span class="text-xs bg-amber-900/30 text-amber-300 px-2 py-0.5 rounded">🔄 In Progress</span>'
+            };
+            return map[status] || status;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const d = new Date(dateStr);
+            return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // ==================== SETTINGS ====================
+        function loadSettings() {
+            if (settings.electricityRate) document.getElementById('electricityRate').value = settings.electricityRate;
+            if (settings.profitMargin) document.getElementById('profitMargin').value = settings.profitMargin;
+            if (settings.defaultPrinter) {
+                document.getElementById('printerModel').value = settings.defaultPrinter;
+                updatePrinterSpecs();
+            }
+        }
+
+        function saveSettings() {
+            settings = {
+                electricityRate: parseFloat(document.getElementById('setDefaultElec').value) || 1445,
+                profitMargin: parseFloat(document.getElementById('setDefaultMargin').value) || 50,
+                defaultPrinter: document.getElementById('setDefaultPrinter').value,
+                currency: document.getElementById('setDefaultCurrency').value
+            };
+            localStorage.setItem('bambuSettings', JSON.stringify(settings));
+            showToast('Settings saved!');
+        }
+
+        // ==================== EXPORT / IMPORT ====================
+        function exportData() {
+            if (prints.length === 0) return showToast('No data to export');
+            const headers = ['Date', 'Name', 'Printer', 'Status', 'Filament', 'Weight(g)', 'Hours', 'Filament Cost', 'Electricity Cost', 'Depreciation', 'Total Cost', 'Selling Price', 'Profit'];
+            const rows = prints.map(p => [
+                p.date, p.name, p.printer, p.status, p.filamentType, p.filamentWeight, p.printHours,
+                Math.round(p.costs.filamentCost), Math.round(p.costs.electricityCost),
+                Math.round(p.costs.depreciationCost), Math.round(p.costs.totalCost),
+                Math.round(p.costs.sellingPrice), Math.round(p.costs.profit)
+            ]);
+            const csv = [headers.join(','), ...rows.map(r => r.map(c => `"${c}"`).join(','))].join('\n');
+            downloadFile(csv, 'bambu-lab-prints.csv', 'text/csv');
+        }
+
+        function exportJSON() {
+            const data = JSON.stringify({ prints, settings, exportDate: new Date().toISOString() }, null, 2);
+            downloadFile(data, 'bambu-lab-backup.json', 'application/json');
+            showToast('Backup exported!');
+        }
+
+        function importJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.prints) {
+                        prints = data.prints;
+                        localStorage.setItem('bambuPrints', JSON.stringify(prints));
+                    }
+                    if (data.settings) {
+                        settings = data.settings;
+                        localStorage.setItem('bambuSettings', JSON.stringify(settings));
+                    }
+                    renderHistory();
+                    showToast('Data imported successfully!');
+                } catch (err) {
+                    showToast('Invalid file format!');
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        function downloadFile(content, filename, type) {
+            const blob = new Blob([content], { type });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // ==================== TOAST ====================
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').textContent = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+                toast.classList.remove('translate-y-0', 'opacity-100');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
