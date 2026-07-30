@@ -91,10 +91,11 @@
                                 <select id="printerModel" class="input-dark w-full rounded-lg px-4 py-2.5 text-sm" onchange="updatePrinterSpecs()">
                                     <option value="X1C">Bambu Lab X1 Carbon</option>
                                     <option value="X1E">Bambu Lab X1E</option>
-                                    <option value="P1S" selected>Bambu Lab P1S</option>
+                                    <option value="P1S">Bambu Lab P1S</option>
                                     <option value="P1P">Bambu Lab P1P</option>
                                     <option value="A1">Bambu Lab A1</option>
                                     <option value="A1Mini">Bambu Lab A1 Mini</option>
+                                    <option value="H2D" selected>Bambu Lab H2D</option>
                                 </select>
                             </div>
                             <div>
@@ -116,7 +117,7 @@
                         <div class="grid md:grid-cols-3 gap-4">
                             <div>
                                 <label class="block text-sm text-gray-400 mb-1">Filament Type</label>
-                                <select id="filamentType" class="input-dark w-full rounded-lg px-4 py-2.5 text-sm">
+                                <select id="filamentType" class="input-dark w-full rounded-lg px-4 py-2.5 text-sm" onchange="updateFilamentDefaultPrice()">
                                     <option value="PLA">PLA</option>
                                     <option value="PETG">PETG</option>
                                     <option value="ABS">ABS</option>
@@ -124,9 +125,10 @@
                                     <option value="TPU">TPU</option>
                                     <option value="PC">PC</option>
                                     <option value="PA">PA (Nylon)</option>
-                                    <option value="PLA-CF">PLA-CF</option>
-                                    <option value="PETG-CF">PETG-CF</option>
-                                    <option value="PA-CF">PA-CF</option>
+                                    <option value="PLA-CF">PLA-CF (Carbon)</option>
+                                    <option value="PETG-CF">PETG-CF (Carbon)</option>
+                                    <option value="PA-CF">PA-CF (Carbon)</option>
+                                    <option value="ABS-CF">ABS-CF (Carbon)</option>
                                 </select>
                             </div>
                             <div>
@@ -162,7 +164,7 @@
                             </div>
                             <div>
                                 <label class="block text-sm text-gray-400 mb-1">Power Consumption (Watt)</label>
-                                <input type="number" id="powerWatt" class="input-dark w-full rounded-lg px-4 py-2.5 text-sm" value="220" step="10" min="0" oninput="calculateCost()">
+                                <input type="number" id="powerWatt" class="input-dark w-full rounded-lg px-4 py-2.5 text-sm" value="300" step="10" min="0" oninput="calculateCost()">
                             </div>
                             <div>
                                 <label class="block text-sm text-gray-400 mb-1">Electricity Rate (Rp/kWh)</label>
@@ -179,11 +181,11 @@
                         <div class="grid md:grid-cols-3 gap-4">
                             <div>
                                 <label class="block text-sm text-gray-400 mb-1">Printer Price (Rp)</label>
-                                <input type="number" id="printerPrice" class="input-dark w-full rounded-lg px-4 py-2.5 text-sm" value="8500000" step="100000" min="0" oninput="calculateCost()">
+                                <input type="number" id="printerPrice" class="input-dark w-full rounded-lg px-4 py-2.5 text-sm" value="41600000" step="100000" min="0" oninput="calculateCost()">
                             </div>
                             <div>
-                                <label class="block text-sm text-gray-400 mb-1">Expected Lifetime (prints)</label>
-                                <input type="number" id="printerLifetime" class="input-dark w-full rounded-lg px-4 py-2.5 text-sm" value="2000" step="100" min="1" oninput="calculateCost()">
+                                <label class="block text-sm text-gray-400 mb-1">Jam Pakai per Tahun (Depresiasi)</label>
+                                <input type="number" id="yearlyHours" class="input-dark w-full rounded-lg px-4 py-2.5 text-sm" value="2920" step="100" min="1" oninput="calculateCost()" title="Default: 8 jam/hari x 365 hari = 2920 jam">
                             </div>
                             <div>
                                 <label class="block text-sm text-gray-400 mb-1">Nozzle/Plate Cost (Rp)</label>
@@ -232,6 +234,7 @@
                             <div class="stat-card rounded-lg p-4">
                                 <div class="text-xs text-gray-400 mb-1">Depreciation Cost</div>
                                 <div class="text-xl font-bold text-cyan-300" id="costDepreciation">Rp 0</div>
+                                <div class="text-[10px] text-gray-500 mt-1" id="depreciationRate">Rp 0 / jam</div>
                             </div>
                             <div class="stat-card rounded-lg p-4">
                                 <div class="text-xs text-gray-400 mb-1">Wear & Tear</div>
@@ -300,6 +303,7 @@
                     <option value="P1P">P1P</option>
                     <option value="A1">A1</option>
                     <option value="A1Mini">A1 Mini</option>
+                    <option value="H2D">H2D</option>
                 </select>
                 <button onclick="exportData()" class="btn-success px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
                     <i class="fas fa-download"></i> Export CSV
@@ -359,10 +363,11 @@
                             <select id="setDefaultPrinter" class="input-dark w-full rounded-lg px-4 py-2.5 text-sm">
                                 <option value="X1C">Bambu Lab X1 Carbon</option>
                                 <option value="X1E">Bambu Lab X1E</option>
-                                <option value="P1S" selected>Bambu Lab P1S</option>
+                                <option value="P1S">Bambu Lab P1S</option>
                                 <option value="P1P">Bambu Lab P1P</option>
                                 <option value="A1">Bambu Lab A1</option>
                                 <option value="A1Mini">Bambu Lab A1 Mini</option>
+                                <option value="H2D" selected>Bambu Lab H2D</option>
                             </select>
                         </div>
                         <div>
@@ -415,6 +420,7 @@
                                 <tr><td class="px-3 py-2">P1P</td><td class="px-3 py-2">220W</td><td class="px-3 py-2">~120W</td><td class="px-3 py-2">Rp 6.500.000</td></tr>
                                 <tr><td class="px-3 py-2">A1</td><td class="px-3 py-2">150W</td><td class="px-3 py-2">~80W</td><td class="px-3 py-2">Rp 5.500.000</td></tr>
                                 <tr><td class="px-3 py-2">A1 Mini</td><td class="px-3 py-2">120W</td><td class="px-3 py-2">~60W</td><td class="px-3 py-2">Rp 3.500.000</td></tr>
+                                <tr class="bg-cyan-900/20"><td class="px-3 py-2 font-semibold text-cyan-300">H2D</td><td class="px-3 py-2">1000W</td><td class="px-3 py-2">~300W</td><td class="px-3 py-2">Rp 41.600.000</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -446,12 +452,13 @@
     <script>
         // ==================== DATA & STATE ====================
         const PRINTER_SPECS = {
-            X1C: { power: 150, price: 22000000, name: 'X1 Carbon' },
-            X1E: { power: 150, price: 35000000, name: 'X1E' },
-            P1S: { power: 120, price: 8500000, name: 'P1S' },
-            P1P: { power: 120, price: 6500000, name: 'P1P' },
-            A1: { power: 80, price: 5500000, name: 'A1' },
-            A1Mini: { power: 60, price: 3500000, name: 'A1 Mini' }
+            X1C: { power: 150, price: 22000000, name: 'X1 Carbon', yearlyHours: 2920 },
+            X1E: { power: 150, price: 35000000, name: 'X1E', yearlyHours: 2920 },
+            P1S: { power: 120, price: 8500000, name: 'P1S', yearlyHours: 2920 },
+            P1P: { power: 120, price: 6500000, name: 'P1P', yearlyHours: 2920 },
+            A1: { power: 80, price: 5500000, name: 'A1', yearlyHours: 2920 },
+            A1Mini: { power: 60, price: 3500000, name: 'A1 Mini', yearlyHours: 2920 },
+            H2D: { power: 300, price: 41600000, name: 'H2D', yearlyHours: 2920 } // 8 jam/hari x 365 hari
         };
 
         let prints = JSON.parse(localStorage.getItem('bambuPrints') || '[]');
@@ -463,8 +470,8 @@
             document.getElementById('currentDate').textContent = new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
             document.getElementById('printDate').value = new Date().toISOString().split('T')[0];
             loadSettings();
-            calculateCost();
-            renderHistory();
+            updatePrinterSpecs(); // Set default H2D specs
+            updateFilamentDefaultPrice(); // Set default filament price
         });
 
         // ==================== TABS ====================
@@ -489,7 +496,34 @@
             const spec = PRINTER_SPECS[model];
             document.getElementById('powerWatt').value = spec.power;
             document.getElementById('printerPrice').value = spec.price;
+            document.getElementById('yearlyHours').value = spec.yearlyHours;
             calculateCost();
+        }
+
+        // ==================== FILAMENT AUTO-PRICE ====================
+        function updateFilamentDefaultPrice() {
+            const filamentType = document.getElementById('filamentType').value;
+            const priceInput = document.getElementById('filamentPrice');
+            
+            const defaultPrices = {
+                'PLA': 250000,
+                'PETG': 300000,
+                'ABS': 280000,
+                'ASA': 320000,
+                'TPU': 350000,
+                'PC': 400000,
+                'PA': 450000,
+                'PLA-CF': 550000,
+                'PETG-CF': 600000,
+                'PA-CF': 700000,
+                'ABS-CF': 580000
+            };
+            
+            // Auto-fill hanya jika kosong atau masih default awal
+            if (!priceInput.value || priceInput.value == 0) {
+                priceInput.value = defaultPrices[filamentType] || 300000;
+                calculateCost();
+            }
         }
 
         // ==================== CALCULATOR ====================
@@ -500,13 +534,17 @@
             const watt = parseFloat(document.getElementById('powerWatt').value) || 0;
             const elecRate = parseFloat(document.getElementById('electricityRate').value) || 0;
             const printerCost = parseFloat(document.getElementById('printerPrice').value) || 0;
-            const lifetime = parseFloat(document.getElementById('printerLifetime').value) || 1;
+            const yearlyHours = parseFloat(document.getElementById('yearlyHours').value) || 2920;
             const wear = parseFloat(document.getElementById('wearCost').value) || 0;
             const margin = parseFloat(document.getElementById('profitMargin').value) || 0;
 
             const filamentCost = (weight / 1000) * pricePerKg;
             const electricityCost = (watt / 1000) * hours * elecRate;
-            const depreciationCost = printerCost / lifetime;
+            
+            // NEW: Depresiasi dihitung PER JAM berdasarkan pemakaian tahunan
+            const depreciationPerHour = printerCost / yearlyHours;
+            const depreciationCost = depreciationPerHour * hours;
+            
             const totalCost = filamentCost + electricityCost + depreciationCost + wear;
             const sellingPrice = totalCost * (1 + margin / 100);
             const profit = sellingPrice - totalCost;
@@ -514,6 +552,7 @@
             document.getElementById('costFilament').textContent = formatCurrency(filamentCost);
             document.getElementById('costElectricity').textContent = formatCurrency(electricityCost);
             document.getElementById('costDepreciation').textContent = formatCurrency(depreciationCost);
+            document.getElementById('depreciationRate').textContent = `(Rp ${Math.round(depreciationPerHour).toLocaleString('id-ID')} / jam)`;
             document.getElementById('costWear').textContent = formatCurrency(wear);
             document.getElementById('costTotal').textContent = formatCurrency(totalCost);
             document.getElementById('costSelling').textContent = formatCurrency(sellingPrice);
@@ -549,7 +588,7 @@
                 powerWatt: parseFloat(document.getElementById('powerWatt').value) || 0,
                 electricityRate: parseFloat(document.getElementById('electricityRate').value) || 0,
                 printerPrice: parseFloat(document.getElementById('printerPrice').value) || 0,
-                printerLifetime: parseFloat(document.getElementById('printerLifetime').value) || 2000,
+                yearlyHours: parseFloat(document.getElementById('yearlyHours').value) || 2920,
                 wearCost: parseFloat(document.getElementById('wearCost').value) || 0,
                 profitMargin: parseFloat(document.getElementById('profitMargin').value) || 0,
                 notes: document.getElementById('printNotes').value,
@@ -591,7 +630,7 @@
             document.getElementById('powerWatt').value = p.powerWatt;
             document.getElementById('electricityRate').value = p.electricityRate;
             document.getElementById('printerPrice').value = p.printerPrice;
-            document.getElementById('printerLifetime').value = p.printerLifetime;
+            document.getElementById('yearlyHours').value = p.yearlyHours || 2920;
             document.getElementById('wearCost').value = p.wearCost;
             document.getElementById('profitMargin').value = p.profitMargin;
             document.getElementById('printNotes').value = p.notes || '';
@@ -640,6 +679,7 @@
             document.getElementById('wearCost').value = '0';
             document.getElementById('printNotes').value = '';
             updatePrinterSpecs();
+            updateFilamentDefaultPrice();
         }
 
         // ==================== HISTORY RENDER ====================
